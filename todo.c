@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <string.h>
 
 FILE *createTempFile(char *buffer, size_t bufferSize, const char *filename) {
     int written = snprintf(buffer, bufferSize, "%sXXXXXX", filename);
@@ -34,34 +35,60 @@ int main(int argc, char *argv[]) {
     int opt;
     char *item = NULL;
     int delete = 0;
-    int done = 0;
+    int completed = 0;
     int unfinished = 0;
+    char **list = NULL;
+    char line[256];
+
+    int counter = 0;
+    int lineNo = 1;
+    int onlyUnfinished = 0;
+    int onlyCompleted = 0;
+    int listMode = 0;
 
     char nameBuffer[256];
     const char *basename = "todo_";
 
-    FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
-
     while ((opt = getopt(argc, argv, "a:e:d:c:u:lUCh")) != -1) {
         switch (opt) {
-            case 'a':
+            case 'a': {
                 item = optarg;
-                break;
-            case 'e':
-                // text und nr, hier mit optarg und opting dann machen
-            case 'd':
-                delete = atoi(optarg);
 
-                if (delete < 1) {
-                    fprintf(stderr, "Fehler: Die Item-Nummer kann nicht niedriger als 1 sein.\n");
+                FILE *oldFile = fopen("todo.txt", "r");
+                FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
+
+                if (temp == NULL) {
+                    return EXIT_FAILURE;
+                }
+
+                // bisherigen Inhalt kopieren
+                if (oldFile != NULL) {
+                    int c;
+
+                    while ((c = fgetc(oldFile)) != EOF) {
+                        fputc(c, temp);
+                    }
+
+                    fclose(oldFile);
+                }
+
+                // neue Aufgabe hinzufügen
+                fprintf(temp, "o%s\n", item);
+
+                fclose(temp);
+
+                // Temp-Datei wird zur neuen todo.txt
+                if (rename(nameBuffer, "todo.txt") != 0) {
+                    perror("rename fehlgeschlagen");
                     return EXIT_FAILURE;
                 }
 
                 break;
+            }
             case 'c':
-                done = atoi(optarg);
+                completed = atoi(optarg);
 
-                if (done < 1) {
+                if (completed < 1) {
                     fprintf(stderr, "Fehler: Die Item-Nummer kann nicht niedriger als 1 sein.\n");
                     return EXIT_FAILURE;
                 }
@@ -77,26 +104,36 @@ int main(int argc, char *argv[]) {
 
                 break;
             case 'l':
+                listMode = 1;
                 FILE *f = fopen("todo.txt", "r");
-                char line[256];
-                int lineNo = 1;
-                
                 while (fgets(line, sizeof(line), f) != NULL) {
-                    if (line[0] == 'o') {
-                        fprintf(stdout, "%d. [ ] %s", lineNo, &line[1]);
-                    } else if (line[0] == 'e') {
-                        fprintf(stdout, "%d. [x] %s", lineNo, &line[1]);
+                    char **temp = realloc(list, (counter + 1) * sizeof(char *));
+
+                    if (temp == NULL) {
+                        // Fehler behandeln
                     }
-                    
-                    lineNo++;
+
+                    list = temp;
+
+                    list[counter] = malloc(strlen(line) + 1);
+
+                    if (list[counter] == NULL) {
+                        // Fehler behandeln
+                    }
+
+                    strcpy(list[counter], line);
+
+                    counter++;
                 }
 
-                fprintf(stdout, "\n");
                 fclose(f);
-
                 break;
             case 'U':
+                onlyUnfinished = 1;
+                break;
             case 'C':
+                onlyCompleted = 1;
+                break;
             case 'h':
                 printf("usage: todo [-a text] [-e text item-no] [-d item-no]\n");
                 printf("            [-c item-no] [-u item-no] [-l] [-U] [-C] [-h]\n");
@@ -104,7 +141,29 @@ int main(int argc, char *argv[]) {
             case '?':
                 return EXIT_FAILURE;
             default:
+                break;
         }
+    }
+
+    if (listMode) {
+        for (int i = 0; i < counter; i++) {
+            if (onlyUnfinished && list[i][0] != 'o') {
+                continue;
+            }
+
+            if (onlyCompleted && list[i][0] != 'e') {
+                continue;
+            }
+
+            if (list[i][0] == 'o') {
+            printf("%d. [ ] %s", lineNo, &list[i][1]);
+            lineNo++;
+            } else if (list[i][0] == 'e') {
+                printf("%d. [x] %s", lineNo, &list[i][1]);
+                lineNo++;
+            }
+        }
+        printf("\n");
     }
 
     return EXIT_SUCCESS;
