@@ -32,53 +32,69 @@ FILE *createTempFile(char *buffer, size_t bufferSize, const char *filename) {
 
 int main(int argc, char *argv[]) {
     int opt;
-    char *a = NULL;
-    int d = 0;
-    int c = 0;
-    int u = 0;
+    char *item = NULL;
+    int delete = 0;
+    int done = 0;
+    int unfinished = 0;
 
     char nameBuffer[256];
     const char *basename = "todo_";
 
-    FILE *temp = createTempFile(nameBuffer, size_of(nameBuffer), basename);
-
-    FILE *f = fopen("todo.txt", "r");
+    FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
 
     while ((opt = getopt(argc, argv, "a:e:d:c:u:lUCh")) != -1) {
         switch (opt) {
             case 'a':
-                a = optarg;
+                item = optarg;
                 break;
             case 'e':
                 // text und nr, hier mit optarg und opting dann machen
             case 'd':
-                d = atoi(optarg);
+                delete = atoi(optarg);
 
-                if (d < 1) {
+                if (delete < 1) {
                     fprintf(stderr, "Fehler: Die Item-Nummer kann nicht niedriger als 1 sein.\n");
                     return EXIT_FAILURE;
                 }
 
                 break;
             case 'c':
-                c = atoi(optarg);
+                done = atoi(optarg);
 
-                if (c < 1) {
+                if (done < 1) {
                     fprintf(stderr, "Fehler: Die Item-Nummer kann nicht niedriger als 1 sein.\n");
                     return EXIT_FAILURE;
                 }
 
                 break;
             case 'u':
-                u = atoi(optarg);
+                unfinished = atoi(optarg);
 
-                if (u < 1) {
+                if (unfinished < 1) {
                     fprintf(stderr, "Fehler: Die Item-Nummer kann nicht niedriger als 1 sein.\n");
                     return EXIT_FAILURE;
                 }
 
                 break;
             case 'l':
+                FILE *f = fopen("todo.txt", "r");
+                char line[256];
+                int lineNo = 1;
+                
+                while (fgets(line, sizeof(line), f) != NULL) {
+                    if (line[0] == 'o') {
+                        fprintf(stdout, "%d. [ ] %s", lineNo, &line[1]);
+                    } else if (line[0] == 'e') {
+                        fprintf(stdout, "%d. [x] %s", lineNo, &line[1]);
+                    }
+                    
+                    lineNo++;
+                }
+
+                fprintf(stdout, "\n");
+                fclose(f);
+
+                break;
             case 'U':
             case 'C':
             case 'h':
