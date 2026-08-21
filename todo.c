@@ -34,13 +34,11 @@ FILE *createTempFile(char *buffer, size_t bufferSize, const char *filename) {
 int main(int argc, char *argv[]) {
     int opt;
     char *item = NULL;
-    int delete = 0;
-    int unfinished = 0;
     char **list = NULL;
     char line[256];
 
     int counter = 0; // muss hier definiert werden, weil der Inhalt am Ende bei der Ausgabe noch wichtig wird
-    int lineNo = 1;
+    int lineNo = 1; // muss hier definiert werden, weil es entweder im Switch oder am Ende zum Einsatz kommt
     int onlyUnfinished = 0;
     int onlyCompleted = 0;
     int listMode = 0;
@@ -71,8 +69,7 @@ int main(int argc, char *argv[]) {
                     fclose(oldFile);
                 }
 
-                // neue Aufgabe hinzufügen
-                fprintf(temp, "o%s\n", item);
+                fprintf(temp, "o%s\n", item); // neue Aufgabe hinzufügen
 
                 fclose(temp);
 
@@ -84,6 +81,9 @@ int main(int argc, char *argv[]) {
 
                 break;
             }
+            case 'd':
+                int delete = atoi(optarg);
+                break;
             case 'e':
                 // noch erstellen zum Schluss mit optarg und optind
                 break;
@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
                 break;
             }
             case 'u':
-                unfinished = atoi(optarg);
+                int unfinished = atoi(optarg);
 
                 if (unfinished < 1) {
                     fprintf(stderr, "Fehler: Die Item-Nummer kann nicht niedriger als 1 sein.\n");
@@ -163,6 +163,16 @@ int main(int argc, char *argv[]) {
             case 'h':
                 printf("usage: todo [-a text] [-e text item-no] [-d item-no]\n");
                 printf("            [-c item-no] [-u item-no] [-l] [-U] [-C] [-h]\n");
+                printf("options:\n");
+                printf("-a text                 Set text value\n");
+                printf("-e text item-no         Set text value for the specified item\n");
+                printf("-d item-no              Delete item\n");
+                printf("-c item-no              Check item\n");
+                printf("-u item-no              Uncheck item\n");
+                printf("-l                      List items\n");
+                printf("-U                      Show only incomplete items (requires -l)\n");
+                printf("-C                      Show only completed items (requires -l)\n");
+                printf("-h                      Display this help message\n");
                 return EXIT_SUCCESS;
             case '?':
                 return EXIT_FAILURE;
