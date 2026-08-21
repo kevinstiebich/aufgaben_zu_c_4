@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
 
                 // Temp-Datei wird zur neuen todo.txt
                 if (rename(nameBuffer, "todo.txt") != 0) {
-                    perror("rename fehlgeschlagen");
+                    perror("rename failed");
                     return EXIT_FAILURE;
                 }
 
@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
                 int delete = atoi(optarg);
 
                 if (delete < 1) {
-                    fprintf(stderr, "Fehler: Die Item-Nummer kann nicht niedriger als 1 sein.\n");
+                    fprintf(stderr, "Error: The item-number can't be less than 1.\n");
                     return EXIT_FAILURE;
                 }
 
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
                 fclose(temp);
 
                 if (rename(nameBuffer, "todo.txt") != 0) {
-                    perror("rename fehlgeschlagen");
+                    perror("rename failed");
                     return EXIT_FAILURE;
                 }
 
@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
                 int replaceNo = atoi(argv[optind]);
 
                 if (replaceNo < 1) {
-                    fprintf(stderr, "Fehler: Die Item-Nummer kann nicht niedriger als 1 sein.\n");
+                    fprintf(stderr, "Error: The item-number can't be less than 1.\n");
                     return EXIT_FAILURE;
                 }
 
@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
                 fclose(temp);
 
                 if (rename(nameBuffer, "todo.txt") != 0) {
-                    perror("rename fehlgeschlagen");
+                    perror("rename failed");
                     return EXIT_FAILURE;
                 }
 
@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
                 int complete = atoi(optarg);
 
                 if (complete < 1) {
-                    fprintf(stderr, "Fehler: Die Item-Nummer kann nicht niedriger als 1 sein.\n");
+                    fprintf(stderr, "Error: The item-number can't be less than 1.\n");
                     return EXIT_FAILURE;
                 }
 
@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
 
                 // Temp-Datei wird zur neuen todo.txt
                 if (rename(nameBuffer, "todo.txt") != 0) {
-                    perror("rename fehlgeschlagen");
+                    perror("rename failed");
                     return EXIT_FAILURE;
                 }
 
@@ -179,7 +179,7 @@ int main(int argc, char *argv[]) {
                 int c;
 
                 if (unfinish < 1) {
-                    fprintf(stderr, "Fehler: Die Item-Nummer kann nicht niedriger als 1 sein.\n");
+                    fprintf(stderr, "Error: The item-number can't be less than 1.\n");
                     return EXIT_FAILURE;
                 }
 
@@ -199,7 +199,7 @@ int main(int argc, char *argv[]) {
 
                 // Temp-Datei wird zur neuen todo.txt
                 if (rename(nameBuffer, "todo.txt") != 0) {
-                    perror("rename fehlgeschlagen");
+                    perror("rename failed");
                     return EXIT_FAILURE;
                 }
 
@@ -213,7 +213,8 @@ int main(int argc, char *argv[]) {
                     char **temp = realloc(list, (counter + 1) * sizeof(char *));
 
                     if (temp == NULL) {
-                        // Fehler behandeln
+                        perror("realloc failed");
+                        return EXIT_FAILURE;
                     }
 
                     list = temp;
@@ -221,7 +222,8 @@ int main(int argc, char *argv[]) {
                     list[counter] = malloc(strlen(line) + 1);
 
                     if (list[counter] == NULL) {
-                        // Fehler behandeln
+                        perror("malloc failed");
+                        return EXIT_FAILURE;
                     }
 
                     strcpy(list[counter], line);
@@ -253,10 +255,11 @@ int main(int argc, char *argv[]) {
                 printf("-h                      Display this help message\n");
                 return EXIT_SUCCESS;
             case '?':
+                fprintf(stderr, "Unknown command. Use -h to get help.\n");
                 return EXIT_FAILURE;
             default:
-                // Sollte niemals eintreten, nur für den Fall hier Fehler einfügen
-                break;
+                fprintf(stderr, "Unexpected error during option parsing.\n");
+                return EXIT_FAILURE;
         }
     }
 
