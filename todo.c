@@ -111,9 +111,39 @@ int main(int argc, char *argv[]) {
 
                 break;
             }
-            case 'e':
-                // noch erstellen zum Schluss mit optarg und optind
+            case 'e': {
+                char *replaceArg = optarg;
+                int replaceNo = atoi(argv[optind]);
+
+                if (replaceNo < 1) {
+                    fprintf(stderr, "Fehler: Die Item-Nummer kann nicht niedriger als 1 sein.\n");
+                    return EXIT_FAILURE;
+                }
+
+                FILE *oldFile = fopen("todo.txt", "r");
+                FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
+
+                while (fgets(line, sizeof(line), oldFile) != NULL) {
+                    if (replaceNo == lineNo) {
+                        fprintf(temp, "o%s\n", replaceArg);
+                        lineNo++;
+                        continue;
+                    }
+
+                    fprintf(temp, "%s", line);
+                    lineNo++;
+                }
+
+                fclose(oldFile);
+                fclose(temp);
+
+                if (rename(nameBuffer, "todo.txt") != 0) {
+                    perror("rename fehlgeschlagen");
+                    return EXIT_FAILURE;
+                }
+
                 break;
+            }
             case 'c': {
                 int complete = atoi(optarg);
 
