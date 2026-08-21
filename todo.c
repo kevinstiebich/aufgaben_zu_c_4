@@ -118,15 +118,37 @@ int main(int argc, char *argv[]) {
 
                 break;
             }
-            case 'u':
-                int unfinished = atoi(optarg);
+            case 'u': {
+                int unfinish = atoi(optarg);
+                int c;
 
-                if (unfinished < 1) {
+                if (unfinish < 1) {
                     fprintf(stderr, "Fehler: Die Item-Nummer kann nicht niedriger als 1 sein.\n");
                     return EXIT_FAILURE;
                 }
 
+                FILE *oldFile = fopen("todo.txt", "r");
+                FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
+
+                while (fgets(line, sizeof(line), oldFile) != NULL) {
+                    if (unfinish == lineNo) {
+                        line[0] = 'o';
+                    }
+                    fprintf(temp, "%s", line);
+                    lineNo++;
+                }
+
+                fclose(oldFile);
+                fclose(temp);
+
+                // Temp-Datei wird zur neuen todo.txt
+                if (rename(nameBuffer, "todo.txt") != 0) {
+                    perror("rename fehlgeschlagen");
+                    return EXIT_FAILURE;
+                }
+
                 break;
+            }
             case 'l': {
                 listMode = 1;
                 FILE *f = fopen("todo.txt", "r");
