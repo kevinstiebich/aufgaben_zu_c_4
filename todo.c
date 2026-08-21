@@ -35,12 +35,11 @@ int main(int argc, char *argv[]) {
     int opt;
     char *item = NULL;
     int delete = 0;
-    int completed = 0;
     int unfinished = 0;
     char **list = NULL;
     char line[256];
 
-    int counter = 0;
+    int counter = 0; // muss hier definiert werden, weil der Inhalt am Ende bei der Ausgabe noch wichtig wird
     int lineNo = 1;
     int onlyUnfinished = 0;
     int onlyCompleted = 0;
@@ -85,15 +84,40 @@ int main(int argc, char *argv[]) {
 
                 break;
             }
-            case 'c':
-                completed = atoi(optarg);
+            case 'e':
+                // noch erstellen zum Schluss mit optarg und optind
+                break;
+            case 'c': {
+                int complete = atoi(optarg);
+                int c;
 
-                if (completed < 1) {
+                if (complete < 1) {
                     fprintf(stderr, "Fehler: Die Item-Nummer kann nicht niedriger als 1 sein.\n");
                     return EXIT_FAILURE;
                 }
 
+                FILE *oldFile = fopen("todo.txt", "r");
+                FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
+
+                while (fgets(line, sizeof(line), oldFile) != NULL) {
+                    if (complete == lineNo) {
+                        line[0] = 'e';
+                    }
+                    fprintf(temp, "%s", line);
+                    lineNo++;
+                }
+
+                fclose(oldFile);
+                fclose(temp);
+
+                // Temp-Datei wird zur neuen todo.txt
+                if (rename(nameBuffer, "todo.txt") != 0) {
+                    perror("rename fehlgeschlagen");
+                    return EXIT_FAILURE;
+                }
+
                 break;
+            }
             case 'u':
                 unfinished = atoi(optarg);
 
@@ -103,9 +127,10 @@ int main(int argc, char *argv[]) {
                 }
 
                 break;
-            case 'l':
+            case 'l': {
                 listMode = 1;
                 FILE *f = fopen("todo.txt", "r");
+
                 while (fgets(line, sizeof(line), f) != NULL) {
                     char **temp = realloc(list, (counter + 1) * sizeof(char *));
 
@@ -128,6 +153,7 @@ int main(int argc, char *argv[]) {
 
                 fclose(f);
                 break;
+            }
             case 'U':
                 onlyUnfinished = 1;
                 break;
@@ -141,6 +167,7 @@ int main(int argc, char *argv[]) {
             case '?':
                 return EXIT_FAILURE;
             default:
+                // Sollte niemals eintreten, nur für den Fall hier Fehler einfügen
                 break;
         }
     }
