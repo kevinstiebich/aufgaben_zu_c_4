@@ -81,15 +81,41 @@ int main(int argc, char *argv[]) {
 
                 break;
             }
-            case 'd':
+            case 'd': {
                 int delete = atoi(optarg);
+
+                if (delete < 1) {
+                    fprintf(stderr, "Fehler: Die Item-Nummer kann nicht niedriger als 1 sein.\n");
+                    return EXIT_FAILURE;
+                }
+
+                FILE *oldFile = fopen("todo.txt", "r");
+                FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
+
+                while (fgets(line, sizeof(line), oldFile) != NULL) {
+                    if (delete == lineNo) {
+                        lineNo++;
+                        continue;
+                    }
+                    fprintf(temp, "%s", line);
+                    lineNo++;
+                }
+
+                fclose(oldFile);
+                fclose(temp);
+
+                if (rename(nameBuffer, "todo.txt") != 0) {
+                    perror("rename fehlgeschlagen");
+                    return EXIT_FAILURE;
+                }
+
                 break;
+            }
             case 'e':
                 // noch erstellen zum Schluss mit optarg und optind
                 break;
             case 'c': {
                 int complete = atoi(optarg);
-                int c;
 
                 if (complete < 1) {
                     fprintf(stderr, "Fehler: Die Item-Nummer kann nicht niedriger als 1 sein.\n");
