@@ -5,6 +5,27 @@
 #include <getopt.h>
 #include <string.h>
 
+int checkItemNo(int itemNo) {
+    if (itemNo < 1) {
+        fprintf(stderr, "Error: The item-number can't be less than 1.\n");
+        return EXIT_FAILURE;
+    } else return EXIT_SUCCESS;
+}
+
+int checkForFileError(FILE *temp) {
+    if (temp == NULL) {
+        perror("Opening file failed");
+        return EXIT_FAILURE;
+    } else return EXIT_SUCCESS;
+}
+
+int renameFile(char *nameBuffer) {
+    if (rename(nameBuffer, "todo.txt") != 0) {
+        perror("rename failed");
+        return EXIT_FAILURE;
+    } else return EXIT_SUCCESS;
+}
+
 FILE *createTempFile(char *buffer, size_t bufferSize, const char *filename) {
     int written = snprintf(buffer, bufferSize, "%sXXXXXX", filename);
 
@@ -53,10 +74,7 @@ int main(int argc, char *argv[]) {
 
                 FILE *oldFile = fopen("todo.txt", "r");
                 FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
-
-                if (temp == NULL) {
-                    return EXIT_FAILURE;
-                }
+                if (checkForFileError(temp) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 // bisherigen Inhalt kopieren
                 if (oldFile != NULL) {
@@ -73,24 +91,17 @@ int main(int argc, char *argv[]) {
 
                 fclose(temp);
 
-                // Temp-Datei wird zur neuen todo.txt
-                if (rename(nameBuffer, "todo.txt") != 0) {
-                    perror("rename failed");
-                    return EXIT_FAILURE;
-                }
+                if (renameFile(nameBuffer) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 break;
             }
             case 'd': {
                 int delete = atoi(optarg);
-
-                if (delete < 1) {
-                    fprintf(stderr, "Error: The item-number can't be less than 1.\n");
-                    return EXIT_FAILURE;
-                }
+                if (checkItemNo(delete) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 FILE *oldFile = fopen("todo.txt", "r");
                 FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
+                if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 while (fgets(line, sizeof(line), oldFile) != NULL) {
                     if (delete == lineNo) {
@@ -104,28 +115,22 @@ int main(int argc, char *argv[]) {
                 fclose(oldFile);
                 fclose(temp);
 
-                if (rename(nameBuffer, "todo.txt") != 0) {
-                    perror("rename failed");
-                    return EXIT_FAILURE;
-                }
+                if (renameFile(nameBuffer) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 break;
             }
             case 'e': {
                 char *replaceArg = optarg;
                 int replaceNo = atoi(argv[optind]);
-
-                if (replaceNo < 1) {
-                    fprintf(stderr, "Error: The item-number can't be less than 1.\n");
-                    return EXIT_FAILURE;
-                }
+                if (checkItemNo(replaceNo) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 FILE *oldFile = fopen("todo.txt", "r");
                 FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
+                if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 while (fgets(line, sizeof(line), oldFile) != NULL) {
                     if (replaceNo == lineNo) {
-                        fprintf(temp, "o%s\n", replaceArg);
+                        fprintf(temp, "%c%s\n", line[0], replaceArg);
                         lineNo++;
                         continue;
                     }
@@ -137,23 +142,17 @@ int main(int argc, char *argv[]) {
                 fclose(oldFile);
                 fclose(temp);
 
-                if (rename(nameBuffer, "todo.txt") != 0) {
-                    perror("rename failed");
-                    return EXIT_FAILURE;
-                }
+                if (renameFile(nameBuffer) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 break;
             }
             case 'c': {
                 int complete = atoi(optarg);
-
-                if (complete < 1) {
-                    fprintf(stderr, "Error: The item-number can't be less than 1.\n");
-                    return EXIT_FAILURE;
-                }
+                if (checkItemNo(complete) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 FILE *oldFile = fopen("todo.txt", "r");
                 FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
+                if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 while (fgets(line, sizeof(line), oldFile) != NULL) {
                     if (complete == lineNo) {
@@ -166,25 +165,17 @@ int main(int argc, char *argv[]) {
                 fclose(oldFile);
                 fclose(temp);
 
-                // Temp-Datei wird zur neuen todo.txt
-                if (rename(nameBuffer, "todo.txt") != 0) {
-                    perror("rename failed");
-                    return EXIT_FAILURE;
-                }
+                if (renameFile(nameBuffer) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 break;
             }
             case 'u': {
                 int unfinish = atoi(optarg);
-                int c;
-
-                if (unfinish < 1) {
-                    fprintf(stderr, "Error: The item-number can't be less than 1.\n");
-                    return EXIT_FAILURE;
-                }
+                if (checkItemNo(unfinish) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 FILE *oldFile = fopen("todo.txt", "r");
                 FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
+                if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 while (fgets(line, sizeof(line), oldFile) != NULL) {
                     if (unfinish == lineNo) {
@@ -197,20 +188,18 @@ int main(int argc, char *argv[]) {
                 fclose(oldFile);
                 fclose(temp);
 
-                // Temp-Datei wird zur neuen todo.txt
-                if (rename(nameBuffer, "todo.txt") != 0) {
-                    perror("rename failed");
-                    return EXIT_FAILURE;
-                }
+                if (renameFile(nameBuffer) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 break;
             }
             case 'l': {
                 listMode = 1;
-                FILE *f = fopen("todo.txt", "r");
 
-                while (fgets(line, sizeof(line), f) != NULL) {
-                    char **temp = realloc(list, (counter + 1) * sizeof(char *));
+                FILE *oldFile = fopen("todo.txt", "r");
+                if (checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
+
+                while (fgets(line, sizeof(line), oldFile) != NULL) {
+                    char **temp = realloc(list, (counter + 1) * sizeof(char *)); // pro Durchlauf den reservierten Speicher für einen weiteren String erweitern
 
                     if (temp == NULL) {
                         perror("realloc failed");
@@ -231,7 +220,7 @@ int main(int argc, char *argv[]) {
                     counter++;
                 }
 
-                fclose(f);
+                fclose(oldFile);
                 break;
             }
             case 'U':
@@ -263,6 +252,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // Ausgabe
     if (listMode) {
         for (int i = 0; i < counter; i++) {
             if (onlyUnfinished && list[i][0] != 'o') {
@@ -283,6 +273,13 @@ int main(int argc, char *argv[]) {
         }
         printf("\n");
     }
+
+    // reservierten Speicher aus dem Heap wieder freigeben
+    for (int i = 0; i < counter; i++) {
+        free(list[i]);
+    }
+
+    free(list);
 
     return EXIT_SUCCESS;
 }
