@@ -26,6 +26,47 @@ int renameFile(char *nameBuffer) {
     } else return EXIT_SUCCESS;
 }
 
+char *getLine(FILE *f) {
+    int c;
+    int length = 0;
+    int capacity = 1;
+    char *line = malloc(capacity * sizeof(char));
+
+    if (line == NULL) {
+        perror("malloc failed");
+        return NULL;
+    }
+
+    while ((c = fgetc(f)) != '\n' && c != EOF) {
+        line[length] = c;
+        length++;
+        capacity++;
+
+        /* vermutlich sehr ineffizient hier für jeden Char einzeln realloc
+        aufzurufen, allerdings habe ich die Aufgabenbeschreibung so verstanden,
+        dass genau das erwünscht ist. */
+
+        char *temp = realloc(line, (capacity * sizeof(char)));
+
+        if (temp == NULL) {
+            perror("realloc failed");
+            free(line);
+            return NULL;
+        }
+
+        line = temp;
+    }
+
+    if (c == EOF && length == 0) {
+        free(line);
+        return NULL;
+    }
+
+    line[length] = '\0';
+
+    return line;
+}
+
 FILE *createTempFile(char *buffer, size_t bufferSize, const char *filename) {
     int written = snprintf(buffer, bufferSize, "%sXXXXXX", filename);
 
@@ -57,6 +98,7 @@ int main(int argc, char *argv[]) {
     char *item = NULL;
     char **list = NULL;
     char line[256];
+    char *newLine;
 
     int counter = 0; // muss hier definiert werden, weil der Inhalt am Ende bei der Ausgabe noch wichtig wird
     int lineNo = 1; // muss hier definiert werden, weil es entweder im Switch oder am Ende zum Einsatz kommt
@@ -74,18 +116,15 @@ int main(int argc, char *argv[]) {
 
                 FILE *oldFile = fopen("todo.txt", "r");
                 FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
-                if (checkForFileError(temp) == EXIT_FAILURE) return EXIT_FAILURE;
+                if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 // bisherigen Inhalt kopieren
-                if (oldFile != NULL) {
-                    int c;
-
-                    while ((c = fgetc(oldFile)) != EOF) {
-                        fputc(c, temp);
-                    }
-
-                    fclose(oldFile);
+                while ((newLine = getLine(oldFile)) != NULL) {
+                    fprintf(temp, "%s\n", newLine);
+                    free(newLine);
                 }
+
+                fclose(oldFile);
 
                 fprintf(temp, "o%s\n", item); // neue Aufgabe hinzufügen
 
@@ -103,12 +142,14 @@ int main(int argc, char *argv[]) {
                 FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
                 if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
 
-                while (fgets(line, sizeof(line), oldFile) != NULL) {
+                while ((newLine = getLine(oldFile)) != NULL) {
                     if (delete == lineNo) {
                         lineNo++;
+                        free(newLine);
                         continue;
                     }
-                    fprintf(temp, "%s", line);
+                    fprintf(temp, "%s\n", newLine);
+                    free(newLine);
                     lineNo++;
                 }
 
@@ -128,14 +169,16 @@ int main(int argc, char *argv[]) {
                 FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
                 if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
 
-                while (fgets(line, sizeof(line), oldFile) != NULL) {
+                while ((newLine = getLine(oldFile)) != NULL) {
                     if (replaceNo == lineNo) {
-                        fprintf(temp, "%c%s\n", line[0], replaceArg);
+                        fprintf(temp, "%c%s\n", newLine[0], replaceArg);
+                        free(newLine);
                         lineNo++;
                         continue;
                     }
 
-                    fprintf(temp, "%s", line);
+                    fprintf(temp, "%s", newLine);
+                    free(newLine);
                     lineNo++;
                 }
 
@@ -154,11 +197,12 @@ int main(int argc, char *argv[]) {
                 FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
                 if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
 
-                while (fgets(line, sizeof(line), oldFile) != NULL) {
+                while ((newLine = getLine(oldFile)) != NULL) {
                     if (complete == lineNo) {
-                        line[0] = 'e';
+                        newLine[0] = 'e';
                     }
-                    fprintf(temp, "%s", line);
+                    fprintf(temp, "%s\n", newLine);
+                    free(newLine);
                     lineNo++;
                 }
 
@@ -177,11 +221,12 @@ int main(int argc, char *argv[]) {
                 FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
                 if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
 
-                while (fgets(line, sizeof(line), oldFile) != NULL) {
+                while ((newLine = getLine(oldFile)) != NULL) {
                     if (unfinish == lineNo) {
-                        line[0] = 'o';
+                        newLine[0] = 'o';
                     }
-                    fprintf(temp, "%s", line);
+                    fprintf(temp, "%s\n", newLine);
+                    free(newLine);
                     lineNo++;
                 }
 
@@ -198,25 +243,17 @@ int main(int argc, char *argv[]) {
                 FILE *oldFile = fopen("todo.txt", "r");
                 if (checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
 
-                while (fgets(line, sizeof(line), oldFile) != NULL) {
-                    char **temp = realloc(list, (counter + 1) * sizeof(char *)); // pro Durchlauf den reservierten Speicher für einen weiteren String erweitern
+                while ((newLine = getLine(oldFile)) != NULL) {
+                    char **temp = realloc(list, (counter + 1) * sizeof(char *));
 
                     if (temp == NULL) {
                         perror("realloc failed");
+                        free(newLine);
                         return EXIT_FAILURE;
                     }
 
                     list = temp;
-
-                    list[counter] = malloc(strlen(line) + 1);
-
-                    if (list[counter] == NULL) {
-                        perror("malloc failed");
-                        return EXIT_FAILURE;
-                    }
-
-                    strcpy(list[counter], line);
-
+                    list[counter] = newLine;
                     counter++;
                 }
 
@@ -252,7 +289,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // Ausgabe
+    // Ausgabe der Liste
     if (listMode) {
         for (int i = 0; i < counter; i++) {
             if (onlyUnfinished && list[i][0] != 'o') {
@@ -264,14 +301,13 @@ int main(int argc, char *argv[]) {
             }
 
             if (list[i][0] == 'o') {
-            printf("%d. [ ] %s", lineNo, &list[i][1]);
+            printf("%d. [ ] %s\n", lineNo, &list[i][1]);
             lineNo++;
             } else if (list[i][0] == 'e') {
-                printf("%d. [x] %s", lineNo, &list[i][1]);
+                printf("%d. [x] %s\n", lineNo, &list[i][1]);
                 lineNo++;
             }
         }
-        printf("\n");
     }
 
     // reservierten Speicher aus dem Heap wieder freigeben
@@ -279,6 +315,7 @@ int main(int argc, char *argv[]) {
         free(list[i]);
     }
 
+    free(newLine);
     free(list);
 
     return EXIT_SUCCESS;
