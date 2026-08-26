@@ -5,6 +5,21 @@
 #include <getopt.h>
 #include <string.h>
 
+void printHelpMessage() {
+    printf("usage: todo [-a text] [-e text item-no] [-d item-no]\n");
+    printf("            [-c item-no] [-u item-no] [-l] [-U] [-C] [-h]\n");
+    printf("options:\n");
+    printf("-a text                 Set text value\n");
+    printf("-e text item-no         Set text value for the specified item\n");
+    printf("-d item-no              Delete item\n");
+    printf("-c item-no              Check item\n");
+    printf("-u item-no              Uncheck item\n");
+    printf("-l                      List items\n");
+    printf("-U                      Show only incomplete items (requires -l)\n");
+    printf("-C                      Show only completed items (requires -l)\n");
+    printf("-h                      Display this help message\n");
+}
+
 int checkItemNo(int itemNo) {
     if (itemNo < 1) {
         fprintf(stderr, "Error: The item-number can't be less than 1.\n");
@@ -97,7 +112,6 @@ int main(int argc, char *argv[]) {
     int opt;
     char *item = NULL;
     char **list = NULL;
-    char line[256];
     char *newLine;
 
     int counter = 0; // muss hier definiert werden, weil der Inhalt am Ende bei der Ausgabe noch wichtig wird
@@ -120,6 +134,14 @@ int main(int argc, char *argv[]) {
 
                 // bisherigen Inhalt kopieren
                 while ((newLine = getLine(oldFile)) != NULL) {
+                    if (newLine[0] != 'o' && newLine[0] != 'e') {
+                        fprintf(stderr, "Die Datei enthält ungültige Zeichen am Anfang einer Zeile.\n");
+                        fclose(oldFile);
+                        fclose(temp);
+                        free(newLine);
+                        return EXIT_FAILURE;
+                    }
+
                     fprintf(temp, "%s\n", newLine);
                     free(newLine);
                 }
@@ -143,6 +165,14 @@ int main(int argc, char *argv[]) {
                 if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 while ((newLine = getLine(oldFile)) != NULL) {
+                    if (newLine[0] != 'o' && newLine[0] != 'e') {
+                        fprintf(stderr, "Die Datei enthält ungültige Zeichen am Anfang einer Zeile.\n");
+                        fclose(oldFile);
+                        fclose(temp);
+                        free(newLine);
+                        return EXIT_FAILURE;
+                    }
+
                     if (delete == lineNo) {
                         lineNo++;
                         free(newLine);
@@ -170,6 +200,14 @@ int main(int argc, char *argv[]) {
                 if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 while ((newLine = getLine(oldFile)) != NULL) {
+                    if (newLine[0] != 'o' && newLine[0] != 'e') {
+                        fprintf(stderr, "Die Datei enthält ungültige Zeichen am Anfang einer Zeile.\n");
+                        fclose(oldFile);
+                        fclose(temp);
+                        free(newLine);
+                        return EXIT_FAILURE;
+                    }
+
                     if (replaceNo == lineNo) {
                         fprintf(temp, "%c%s\n", newLine[0], replaceArg);
                         free(newLine);
@@ -198,6 +236,14 @@ int main(int argc, char *argv[]) {
                 if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 while ((newLine = getLine(oldFile)) != NULL) {
+                    if (newLine[0] != 'o' && newLine[0] != 'e') {
+                        fprintf(stderr, "Die Datei enthält ungültige Zeichen am Anfang einer Zeile.\n");
+                        fclose(oldFile);
+                        fclose(temp);
+                        free(newLine);
+                        return EXIT_FAILURE;
+                    }
+
                     if (complete == lineNo) {
                         newLine[0] = 'e';
                     }
@@ -222,6 +268,14 @@ int main(int argc, char *argv[]) {
                 if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 while ((newLine = getLine(oldFile)) != NULL) {
+                    if (newLine[0] != 'o' && newLine[0] != 'e') {
+                        fprintf(stderr, "Die Datei enthält ungültige Zeichen am Anfang einer Zeile.\n");
+                        fclose(oldFile);
+                        fclose(temp);
+                        free(newLine);
+                        return EXIT_FAILURE;
+                    }
+
                     if (unfinish == lineNo) {
                         newLine[0] = 'o';
                     }
@@ -244,6 +298,13 @@ int main(int argc, char *argv[]) {
                 if (checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
 
                 while ((newLine = getLine(oldFile)) != NULL) {
+                    if (newLine[0] != 'o' && newLine[0] != 'e') {
+                        fprintf(stderr, "Die Datei enthält ungültige Zeichen am Anfang einer Zeile.\n");
+                        fclose(oldFile);
+                        free(newLine);
+                        return EXIT_FAILURE;
+                    }
+
                     char **temp = realloc(list, (counter + 1) * sizeof(char *));
 
                     if (temp == NULL) {
@@ -261,24 +322,13 @@ int main(int argc, char *argv[]) {
                 break;
             }
             case 'U':
-                onlyUnfinished = 1;
+                onlyUnfinished = 1; // gibt nach dem Switch ausschließlich offene ToDo's aus
                 break;
             case 'C':
-                onlyCompleted = 1;
+                onlyCompleted = 1; // gibt nach dem Switch ausschließlich erledigte ToDo's aus
                 break;
             case 'h':
-                printf("usage: todo [-a text] [-e text item-no] [-d item-no]\n");
-                printf("            [-c item-no] [-u item-no] [-l] [-U] [-C] [-h]\n");
-                printf("options:\n");
-                printf("-a text                 Set text value\n");
-                printf("-e text item-no         Set text value for the specified item\n");
-                printf("-d item-no              Delete item\n");
-                printf("-c item-no              Check item\n");
-                printf("-u item-no              Uncheck item\n");
-                printf("-l                      List items\n");
-                printf("-U                      Show only incomplete items (requires -l)\n");
-                printf("-C                      Show only completed items (requires -l)\n");
-                printf("-h                      Display this help message\n");
+                printHelpMessage();
                 return EXIT_SUCCESS;
             case '?':
                 fprintf(stderr, "Unknown command. Use -h to get help.\n");
@@ -314,7 +364,6 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < counter; i++) {
         free(list[i]);
     }
-
     free(newLine);
     free(list);
 
