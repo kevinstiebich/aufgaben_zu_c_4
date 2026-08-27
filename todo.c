@@ -128,6 +128,12 @@ int main(int argc, char *argv[]) {
             case 'a': {
                 item = optarg;
 
+                // Unnötige Argumente prüfen
+                if (argv[optind] != NULL) {
+                    fprintf(stderr, "Fehler. Zuviele Argumente übergeben.\n");
+                    return EXIT_FAILURE;
+                }
+
                 FILE *oldFile = fopen("todo.txt", "r");
                 FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
                 if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
@@ -159,6 +165,12 @@ int main(int argc, char *argv[]) {
             case 'd': {
                 int delete = atoi(optarg);
                 if (checkItemNo(delete) == EXIT_FAILURE) return EXIT_FAILURE;
+
+                // Unnötige Argumente prüfen
+                if (argv[optind] != NULL) {
+                    fprintf(stderr, "Fehler. Zuviele Argumente übergeben.\n");
+                    return EXIT_FAILURE;
+                }
 
                 FILE *oldFile = fopen("todo.txt", "r");
                 FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
@@ -195,6 +207,12 @@ int main(int argc, char *argv[]) {
                 int replaceNo = atoi(argv[optind]);
                 if (checkItemNo(replaceNo) == EXIT_FAILURE) return EXIT_FAILURE;
 
+                // Unnötige Argumente prüfen
+                if (argv[optind + 1] != NULL) {
+                    fprintf(stderr, "Fehler. Zuviele Argumente übergeben.\n");
+                    return EXIT_FAILURE;
+                }
+
                 FILE *oldFile = fopen("todo.txt", "r");
                 FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
                 if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
@@ -215,7 +233,7 @@ int main(int argc, char *argv[]) {
                         continue;
                     }
 
-                    fprintf(temp, "%s", newLine);
+                    fprintf(temp, "%s\n", newLine);
                     free(newLine);
                     lineNo++;
                 }
@@ -230,6 +248,12 @@ int main(int argc, char *argv[]) {
             case 'c': {
                 int complete = atoi(optarg);
                 if (checkItemNo(complete) == EXIT_FAILURE) return EXIT_FAILURE;
+
+                // Unnötige Argumente prüfen
+                if (argv[optind] != NULL) {
+                    fprintf(stderr, "Fehler. Zuviele Argumente übergeben.\n");
+                    return EXIT_FAILURE;
+                }
 
                 FILE *oldFile = fopen("todo.txt", "r");
                 FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
@@ -247,11 +271,27 @@ int main(int argc, char *argv[]) {
                     if (complete == lineNo) {
                         newLine[0] = 'e';
                     }
-                    fprintf(temp, "%s\n", newLine);
-                    free(newLine);
+
+                    char **tmp = realloc(list, (counter + 1) * sizeof(char *));
+
+                    if (tmp == NULL) {
+                        perror("realloc failed");
+                        free(newLine);
+                        return EXIT_FAILURE;
+                    }
+
+                    list = tmp;
+                    list[counter] = newLine;
+
+                    counter++;
                     lineNo++;
                 }
 
+                for (int i = 0; i < counter; i++) {
+                    fprintf(temp, "%s\n", list[i]);
+                }
+
+                free(newLine);
                 fclose(oldFile);
                 fclose(temp);
 
@@ -262,6 +302,12 @@ int main(int argc, char *argv[]) {
             case 'u': {
                 int unfinish = atoi(optarg);
                 if (checkItemNo(unfinish) == EXIT_FAILURE) return EXIT_FAILURE;
+
+                // Unnötige Argumente prüfen
+                if (argv[optind] != NULL) {
+                    fprintf(stderr, "Fehler. Zuviele Argumente übergeben.\n");
+                    return EXIT_FAILURE;
+                }
 
                 FILE *oldFile = fopen("todo.txt", "r");
                 FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
@@ -279,11 +325,27 @@ int main(int argc, char *argv[]) {
                     if (unfinish == lineNo) {
                         newLine[0] = 'o';
                     }
-                    fprintf(temp, "%s\n", newLine);
-                    free(newLine);
+
+                    char **tmp = realloc(list, (counter + 1) * sizeof(char *));
+
+                    if (tmp == NULL) {
+                        perror("realloc failed");
+                        free(newLine);
+                        return EXIT_FAILURE;
+                    }
+
+                    list = tmp;
+                    list[counter] = newLine;
+
+                    counter++;
                     lineNo++;
                 }
 
+                for (int i = 0; i < counter; i++) {
+                    fprintf(temp, "%s\n", list[i]);
+                }
+
+                free(newLine);
                 fclose(oldFile);
                 fclose(temp);
 
@@ -305,15 +367,15 @@ int main(int argc, char *argv[]) {
                         return EXIT_FAILURE;
                     }
 
-                    char **temp = realloc(list, (counter + 1) * sizeof(char *));
+                    char **tmp = realloc(list, (counter + 1) * sizeof(char *));
 
-                    if (temp == NULL) {
+                    if (tmp == NULL) {
                         perror("realloc failed");
                         free(newLine);
                         return EXIT_FAILURE;
                     }
 
-                    list = temp;
+                    list = tmp;
                     list[counter] = newLine;
                     counter++;
                 }
