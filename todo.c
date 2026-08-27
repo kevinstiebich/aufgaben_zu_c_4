@@ -4,8 +4,10 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <string.h>
+#include <stdbool.h>
 
-void printHelpMessage() {
+void printHelpMessage()
+{
     printf("usage: todo [-a text] [-e text item-no] [-d item-no]\n");
     printf("            [-c item-no] [-u item-no] [-l] [-U] [-C] [-h]\n");
     printf("options:\n");
@@ -20,39 +22,54 @@ void printHelpMessage() {
     printf("-h                      Display this help message\n");
 }
 
-int checkItemNo(int itemNo) {
-    if (itemNo < 1) {
+int checkItemNo(int itemNo)
+{
+    if (itemNo < 1)
+    {
         fprintf(stderr, "Error: The item-number can't be less than 1.\n");
         return EXIT_FAILURE;
-    } else return EXIT_SUCCESS;
+    }
+    else
+        return EXIT_SUCCESS;
 }
 
-int checkForFileError(FILE *temp) {
-    if (temp == NULL) {
+int checkForFileError(FILE *temp)
+{
+    if (temp == NULL)
+    {
         perror("Opening file failed");
         return EXIT_FAILURE;
-    } else return EXIT_SUCCESS;
+    }
+    else
+        return EXIT_SUCCESS;
 }
 
-int renameFile(char *nameBuffer) {
-    if (rename(nameBuffer, "todo.txt") != 0) {
+int renameFile(char *nameBuffer)
+{
+    if (rename(nameBuffer, "todo.txt") != 0)
+    {
         perror("rename failed");
         return EXIT_FAILURE;
-    } else return EXIT_SUCCESS;
+    }
+    else
+        return EXIT_SUCCESS;
 }
 
-char *getLine(FILE *f) {
+char *getLine(FILE *f)
+{
     int c;
     int length = 0;
     int capacity = 1;
     char *line = malloc(capacity * sizeof(char));
 
-    if (line == NULL) {
+    if (line == NULL)
+    {
         perror("malloc failed");
         return NULL;
     }
 
-    while ((c = fgetc(f)) != '\n' && c != EOF) {
+    while ((c = fgetc(f)) != '\n' && c != EOF)
+    {
         line[length] = c;
         length++;
         capacity++;
@@ -63,7 +80,8 @@ char *getLine(FILE *f) {
 
         char *temp = realloc(line, (capacity * sizeof(char)));
 
-        if (temp == NULL) {
+        if (temp == NULL)
+        {
             perror("realloc failed");
             free(line);
             return NULL;
@@ -72,7 +90,8 @@ char *getLine(FILE *f) {
         line = temp;
     }
 
-    if (c == EOF && length == 0) {
+    if (c == EOF && length == 0)
+    {
         free(line);
         return NULL;
     }
@@ -82,25 +101,29 @@ char *getLine(FILE *f) {
     return line;
 }
 
-FILE *createTempFile(char *buffer, size_t bufferSize, const char *filename) {
+FILE *createTempFile(char *buffer, size_t bufferSize, const char *filename)
+{
     int written = snprintf(buffer, bufferSize, "%sXXXXXX", filename);
 
-    if (written < 0 || (size_t)written >= bufferSize) {
-        fprintf(stderr, "Fehler: Puffer zu klein für den Dateinamen.\n");
+    if (written < 0 || (size_t)written >= bufferSize)
+    {
+        fprintf(stderr, "Error: Buffer too small for the filename.\n");
         return NULL;
     }
 
     int fd = mkstemp(buffer);
 
-    if (fd == -1) {
-        perror("mkstemp fehlgeschlagen");
+    if (fd == -1)
+    {
+        perror("mkstemp failed");
         return NULL;
     }
 
     FILE *fp = fdopen(fd, "w+");
 
-    if (fp == NULL) {
-        perror("fdopen fehlgeschlagen");
+    if (fp == NULL)
+    {
+        perror("fdopen failed");
         close(fd); // Deskriptor schließen, falls fdopen fehlschlägt
         return NULL;
     }
@@ -108,314 +131,405 @@ FILE *createTempFile(char *buffer, size_t bufferSize, const char *filename) {
     return fp;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     int opt;
     char *item = NULL;
     char **list = NULL;
     char *newLine;
 
-    int counter = 0; // muss hier definiert werden, weil der Inhalt am Ende bei der Ausgabe noch wichtig wird
-    int lineNo = 1; // muss hier definiert werden, weil es entweder im Switch oder am Ende zum Einsatz kommt
-    int onlyUnfinished = 0;
-    int onlyCompleted = 0;
-    int listMode = 0;
+    int counter = 0;             // muss hier definiert werden, weil der Inhalt am Ende bei der Ausgabe noch wichtig wird
+    int lineNo = 1;              // muss hier definiert werden, weil es entweder im Switch oder am Ende zum Einsatz kommt
+    bool onlyUnfinished = false; // ändert Wahrheitswert, falls eine Liste mit nur den unerledigten Aufgaben ausgegeben werden soll
+    bool onlyCompleted = false;  // ändert Wahrheitswert, falls eine Liste mit nur den erledigten Aufgaben ausgegeben werden soll
+    bool listMode = false;       // ändert Wahrheitswert, falls eine Liste ausgegeben werden soll
 
     char nameBuffer[256];
     const char *basename = "todo_";
 
-    while ((opt = getopt(argc, argv, "a:e:d:c:u:lUCh")) != -1) {
-        switch (opt) {
-            case 'a': {
-                item = optarg;
+    while ((opt = getopt(argc, argv, "a:e:d:c:u:lUCh")) != -1)
+    {
+        switch (opt)
+        {
+        case 'a':
+        {
+            item = optarg;
 
-                // Unnötige Argumente prüfen
-                if (argv[optind] != NULL) {
-                    fprintf(stderr, "Fehler. Zuviele Argumente übergeben.\n");
-                    return EXIT_FAILURE;
-                }
-
-                FILE *oldFile = fopen("todo.txt", "r");
-                FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
-                if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
-
-                // bisherigen Inhalt kopieren
-                while ((newLine = getLine(oldFile)) != NULL) {
-                    if (newLine[0] != 'o' && newLine[0] != 'e') {
-                        fprintf(stderr, "Die Datei enthält ungültige Zeichen am Anfang einer Zeile.\n");
-                        fclose(oldFile);
-                        fclose(temp);
-                        free(newLine);
-                        return EXIT_FAILURE;
-                    }
-
-                    fprintf(temp, "%s\n", newLine);
-                    free(newLine);
-                }
-
-                fclose(oldFile);
-
-                fprintf(temp, "o%s\n", item); // neue Aufgabe hinzufügen
-
-                fclose(temp);
-
-                if (renameFile(nameBuffer) == EXIT_FAILURE) return EXIT_FAILURE;
-
-                break;
-            }
-            case 'd': {
-                int delete = atoi(optarg);
-                if (checkItemNo(delete) == EXIT_FAILURE) return EXIT_FAILURE;
-
-                // Unnötige Argumente prüfen
-                if (argv[optind] != NULL) {
-                    fprintf(stderr, "Fehler. Zuviele Argumente übergeben.\n");
-                    return EXIT_FAILURE;
-                }
-
-                FILE *oldFile = fopen("todo.txt", "r");
-                FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
-                if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
-
-                while ((newLine = getLine(oldFile)) != NULL) {
-                    if (newLine[0] != 'o' && newLine[0] != 'e') {
-                        fprintf(stderr, "Die Datei enthält ungültige Zeichen am Anfang einer Zeile.\n");
-                        fclose(oldFile);
-                        fclose(temp);
-                        free(newLine);
-                        return EXIT_FAILURE;
-                    }
-
-                    if (delete == lineNo) {
-                        lineNo++;
-                        free(newLine);
-                        continue;
-                    }
-                    fprintf(temp, "%s\n", newLine);
-                    free(newLine);
-                    lineNo++;
-                }
-
-                fclose(oldFile);
-                fclose(temp);
-
-                if (renameFile(nameBuffer) == EXIT_FAILURE) return EXIT_FAILURE;
-
-                break;
-            }
-            case 'e': {
-                char *replaceArg = optarg;
-                int replaceNo = atoi(argv[optind]);
-                if (checkItemNo(replaceNo) == EXIT_FAILURE) return EXIT_FAILURE;
-
-                // Unnötige Argumente prüfen
-                if (argv[optind + 1] != NULL) {
-                    fprintf(stderr, "Fehler. Zuviele Argumente übergeben.\n");
-                    return EXIT_FAILURE;
-                }
-
-                FILE *oldFile = fopen("todo.txt", "r");
-                FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
-                if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
-
-                while ((newLine = getLine(oldFile)) != NULL) {
-                    if (newLine[0] != 'o' && newLine[0] != 'e') {
-                        fprintf(stderr, "Die Datei enthält ungültige Zeichen am Anfang einer Zeile.\n");
-                        fclose(oldFile);
-                        fclose(temp);
-                        free(newLine);
-                        return EXIT_FAILURE;
-                    }
-
-                    if (replaceNo == lineNo) {
-                        fprintf(temp, "%c%s\n", newLine[0], replaceArg);
-                        free(newLine);
-                        lineNo++;
-                        continue;
-                    }
-
-                    fprintf(temp, "%s\n", newLine);
-                    free(newLine);
-                    lineNo++;
-                }
-
-                fclose(oldFile);
-                fclose(temp);
-
-                if (renameFile(nameBuffer) == EXIT_FAILURE) return EXIT_FAILURE;
-
-                break;
-            }
-            case 'c': {
-                int complete = atoi(optarg);
-                if (checkItemNo(complete) == EXIT_FAILURE) return EXIT_FAILURE;
-
-                // Unnötige Argumente prüfen
-                if (argv[optind] != NULL) {
-                    fprintf(stderr, "Fehler. Zuviele Argumente übergeben.\n");
-                    return EXIT_FAILURE;
-                }
-
-                FILE *oldFile = fopen("todo.txt", "r");
-                FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
-                if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
-
-                while ((newLine = getLine(oldFile)) != NULL) {
-                    if (newLine[0] != 'o' && newLine[0] != 'e') {
-                        fprintf(stderr, "Die Datei enthält ungültige Zeichen am Anfang einer Zeile.\n");
-                        fclose(oldFile);
-                        fclose(temp);
-                        free(newLine);
-                        return EXIT_FAILURE;
-                    }
-
-                    if (complete == lineNo) {
-                        newLine[0] = 'e';
-                    }
-
-                    char **tmp = realloc(list, (counter + 1) * sizeof(char *));
-
-                    if (tmp == NULL) {
-                        perror("realloc failed");
-                        free(newLine);
-                        return EXIT_FAILURE;
-                    }
-
-                    list = tmp;
-                    list[counter] = newLine;
-
-                    counter++;
-                    lineNo++;
-                }
-
-                for (int i = 0; i < counter; i++) {
-                    fprintf(temp, "%s\n", list[i]);
-                }
-
-                free(newLine);
-                fclose(oldFile);
-                fclose(temp);
-
-                if (renameFile(nameBuffer) == EXIT_FAILURE) return EXIT_FAILURE;
-
-                break;
-            }
-            case 'u': {
-                int unfinish = atoi(optarg);
-                if (checkItemNo(unfinish) == EXIT_FAILURE) return EXIT_FAILURE;
-
-                // Unnötige Argumente prüfen
-                if (argv[optind] != NULL) {
-                    fprintf(stderr, "Fehler. Zuviele Argumente übergeben.\n");
-                    return EXIT_FAILURE;
-                }
-
-                FILE *oldFile = fopen("todo.txt", "r");
-                FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
-                if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
-
-                while ((newLine = getLine(oldFile)) != NULL) {
-                    if (newLine[0] != 'o' && newLine[0] != 'e') {
-                        fprintf(stderr, "Die Datei enthält ungültige Zeichen am Anfang einer Zeile.\n");
-                        fclose(oldFile);
-                        fclose(temp);
-                        free(newLine);
-                        return EXIT_FAILURE;
-                    }
-
-                    if (unfinish == lineNo) {
-                        newLine[0] = 'o';
-                    }
-
-                    char **tmp = realloc(list, (counter + 1) * sizeof(char *));
-
-                    if (tmp == NULL) {
-                        perror("realloc failed");
-                        free(newLine);
-                        return EXIT_FAILURE;
-                    }
-
-                    list = tmp;
-                    list[counter] = newLine;
-
-                    counter++;
-                    lineNo++;
-                }
-
-                for (int i = 0; i < counter; i++) {
-                    fprintf(temp, "%s\n", list[i]);
-                }
-
-                free(newLine);
-                fclose(oldFile);
-                fclose(temp);
-
-                if (renameFile(nameBuffer) == EXIT_FAILURE) return EXIT_FAILURE;
-
-                break;
-            }
-            case 'l': {
-                listMode = 1;
-
-                FILE *oldFile = fopen("todo.txt", "r");
-                if (checkForFileError(oldFile) == EXIT_FAILURE) return EXIT_FAILURE;
-
-                while ((newLine = getLine(oldFile)) != NULL) {
-                    if (newLine[0] != 'o' && newLine[0] != 'e') {
-                        fprintf(stderr, "Die Datei enthält ungültige Zeichen am Anfang einer Zeile.\n");
-                        fclose(oldFile);
-                        free(newLine);
-                        return EXIT_FAILURE;
-                    }
-
-                    char **tmp = realloc(list, (counter + 1) * sizeof(char *));
-
-                    if (tmp == NULL) {
-                        perror("realloc failed");
-                        free(newLine);
-                        return EXIT_FAILURE;
-                    }
-
-                    list = tmp;
-                    list[counter] = newLine;
-                    counter++;
-                }
-
-                fclose(oldFile);
-                break;
-            }
-            case 'U':
-                onlyUnfinished = 1; // gibt nach dem Switch ausschließlich offene ToDo's aus
-                break;
-            case 'C':
-                onlyCompleted = 1; // gibt nach dem Switch ausschließlich erledigte ToDo's aus
-                break;
-            case 'h':
-                printHelpMessage();
-                return EXIT_SUCCESS;
-            case '?':
-                fprintf(stderr, "Unknown command. Use -h to get help.\n");
+            // Unnötige Argumente prüfen
+            if (argv[optind] != NULL)
+            {
+                fprintf(stderr, "Error: Too many arguments.\n");
                 return EXIT_FAILURE;
-            default:
-                fprintf(stderr, "Unexpected error during option parsing.\n");
+            }
+
+            FILE *oldFile = fopen("todo.txt", "r");
+            FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
+            if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE)
                 return EXIT_FAILURE;
+
+            // bisherigen Inhalt kopieren
+            while ((newLine = getLine(oldFile)) != NULL)
+            {
+                if (newLine[0] != 'o' && newLine[0] != 'e')
+                {
+                    fprintf(stderr, "The file contains invalid characters at the beginning of a line.\n");
+                    fclose(oldFile);
+                    fclose(temp);
+                    free(newLine);
+                    return EXIT_FAILURE;
+                }
+
+                char **tmp = realloc(list, (counter + 1) * sizeof(char *));
+
+                if (tmp == NULL)
+                {
+                    perror("realloc failed");
+                    free(newLine);
+                    return EXIT_FAILURE;
+                }
+
+                list = tmp;
+                list[counter] = newLine;
+
+                counter++;
+            }
+
+            for (int i = 0; i < counter; i++)
+            {
+                fprintf(temp, "%s\n", list[i]);
+            }
+
+            fprintf(temp, "o%s\n", item); // neue Aufgabe hinzufügen
+
+            free(newLine);
+            fclose(oldFile);
+            fclose(temp);
+
+            if (renameFile(nameBuffer) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            break;
+        }
+        case 'd':
+        {
+            int delete = atoi(optarg);
+            if (checkItemNo(delete) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            // Unnötige Argumente prüfen
+            if (argv[optind] != NULL)
+            {
+                fprintf(stderr, "Error: Too many arguments.\n");
+                return EXIT_FAILURE;
+            }
+
+            FILE *oldFile = fopen("todo.txt", "r");
+            FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
+            if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            while ((newLine = getLine(oldFile)) != NULL)
+            {
+                if (newLine[0] != 'o' && newLine[0] != 'e')
+                {
+                    fprintf(stderr, "The file contains invalid characters at the beginning of a line.\n");
+                    fclose(oldFile);
+                    fclose(temp);
+                    free(newLine);
+                    return EXIT_FAILURE;
+                }
+
+                if (delete == lineNo)
+                {
+                    lineNo++;
+                    free(newLine);
+                    continue;
+                }
+
+                char **tmp = realloc(list, (counter + 1) * sizeof(char *));
+
+                if (tmp == NULL)
+                {
+                    perror("realloc failed");
+                    free(newLine);
+                    return EXIT_FAILURE;
+                }
+
+                list = tmp;
+                list[counter] = newLine;
+
+                counter++;
+                lineNo++;
+            }
+
+            for (int i = 0; i < counter; i++)
+            {
+                fprintf(temp, "%s\n", list[i]);
+            }
+
+            free(newLine);
+            fclose(oldFile);
+            fclose(temp);
+
+            if (renameFile(nameBuffer) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            break;
+        }
+        case 'e':
+        {
+            char *replaceArg = optarg;
+            int replaceNo = atoi(argv[optind]);
+            if (checkItemNo(replaceNo) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            // Unnötige Argumente prüfen
+            if (argv[optind + 1] != NULL)
+            {
+                fprintf(stderr, "Error: Too many arguments.\n");
+                return EXIT_FAILURE;
+            }
+
+            FILE *oldFile = fopen("todo.txt", "r");
+            FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
+            if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            while ((newLine = getLine(oldFile)) != NULL)
+            {
+                if (newLine[0] != 'o' && newLine[0] != 'e')
+                {
+                    fprintf(stderr, "The file contains invalid characters at the beginning of a line.\n");
+                    fclose(oldFile);
+                    fclose(temp);
+                    free(newLine);
+                    return EXIT_FAILURE;
+                }
+
+                if (replaceNo == lineNo)
+                {
+                    fprintf(temp, "%c%s\n", newLine[0], replaceArg);
+                    free(newLine);
+                    lineNo++;
+                    continue;
+                }
+
+                fprintf(temp, "%s\n", newLine);
+                free(newLine);
+                lineNo++;
+            }
+
+            fclose(oldFile);
+            fclose(temp);
+
+            if (renameFile(nameBuffer) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            break;
+        }
+        case 'c':
+        {
+            int complete = atoi(optarg);
+            if (checkItemNo(complete) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            // Unnötige Argumente prüfen
+            if (argv[optind] != NULL)
+            {
+                fprintf(stderr, "Error: Too many arguments.\n");
+                return EXIT_FAILURE;
+            }
+
+            FILE *oldFile = fopen("todo.txt", "r");
+            FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
+            if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            while ((newLine = getLine(oldFile)) != NULL)
+            {
+                if (newLine[0] != 'o' && newLine[0] != 'e')
+                {
+                    fprintf(stderr, "The file contains invalid characters at the beginning of a line.\n");
+                    fclose(oldFile);
+                    fclose(temp);
+                    free(newLine);
+                    return EXIT_FAILURE;
+                }
+
+                if (complete == lineNo)
+                {
+                    newLine[0] = 'e';
+                }
+
+                char **tmp = realloc(list, (counter + 1) * sizeof(char *));
+
+                if (tmp == NULL)
+                {
+                    perror("realloc failed");
+                    free(newLine);
+                    return EXIT_FAILURE;
+                }
+
+                list = tmp;
+                list[counter] = newLine;
+
+                counter++;
+                lineNo++;
+            }
+
+            for (int i = 0; i < counter; i++)
+            {
+                fprintf(temp, "%s\n", list[i]);
+            }
+
+            free(newLine);
+            fclose(oldFile);
+            fclose(temp);
+
+            if (renameFile(nameBuffer) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            break;
+        }
+        case 'u':
+        {
+            int unfinish = atoi(optarg);
+            if (checkItemNo(unfinish) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            // Unnötige Argumente prüfen
+            if (argv[optind] != NULL)
+            {
+                fprintf(stderr, "Error: Too many arguments.\n");
+                return EXIT_FAILURE;
+            }
+
+            FILE *oldFile = fopen("todo.txt", "r");
+            FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
+            if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            while ((newLine = getLine(oldFile)) != NULL)
+            {
+                if (newLine[0] != 'o' && newLine[0] != 'e')
+                {
+                    fprintf(stderr, "The file contains invalid characters at the beginning of a line.\n");
+                    fclose(oldFile);
+                    fclose(temp);
+                    free(newLine);
+                    return EXIT_FAILURE;
+                }
+
+                if (unfinish == lineNo)
+                {
+                    newLine[0] = 'o';
+                }
+
+                char **tmp = realloc(list, (counter + 1) * sizeof(char *));
+
+                if (tmp == NULL)
+                {
+                    perror("realloc failed");
+                    free(newLine);
+                    return EXIT_FAILURE;
+                }
+
+                list = tmp;
+                list[counter] = newLine;
+
+                counter++;
+                lineNo++;
+            }
+
+            for (int i = 0; i < counter; i++)
+            {
+                fprintf(temp, "%s\n", list[i]);
+            }
+
+            free(newLine);
+            fclose(oldFile);
+            fclose(temp);
+
+            if (renameFile(nameBuffer) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            break;
+        }
+        case 'l':
+        {
+            listMode = true;
+
+            FILE *oldFile = fopen("todo.txt", "r");
+            if (checkForFileError(oldFile) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            while ((newLine = getLine(oldFile)) != NULL)
+            {
+                if (newLine[0] != 'o' && newLine[0] != 'e')
+                {
+                    fprintf(stderr, "The file contains invalid characters at the beginning of a line.\n");
+                    fclose(oldFile);
+                    free(newLine);
+                    return EXIT_FAILURE;
+                }
+
+                char **tmp = realloc(list, (counter + 1) * sizeof(char *));
+
+                if (tmp == NULL)
+                {
+                    perror("realloc failed");
+                    free(newLine);
+                    return EXIT_FAILURE;
+                }
+
+                list = tmp;
+                list[counter] = newLine;
+                counter++;
+            }
+
+            fclose(oldFile);
+            break;
+        }
+        case 'U':
+            onlyUnfinished = true; // gibt nach dem Switch ausschließlich offene ToDo's aus
+            break;
+        case 'C':
+            onlyCompleted = true; // gibt nach dem Switch ausschließlich erledigte ToDo's aus
+            break;
+        case 'h':
+            printHelpMessage();
+            return EXIT_SUCCESS;
+        case '?':
+            fprintf(stderr, "Unknown command. Use -h to get help.\n");
+            return EXIT_FAILURE;
+        default:
+            fprintf(stderr, "Unexpected error during option parsing.\n");
+            return EXIT_FAILURE;
         }
     }
 
     // Ausgabe der Liste
-    if (listMode) {
-        for (int i = 0; i < counter; i++) {
-            if (onlyUnfinished && list[i][0] != 'o') {
+    if (listMode)
+    {
+        for (int i = 0; i < counter; i++)
+        {
+            if (onlyUnfinished && list[i][0] != 'o')
+            {
                 continue;
             }
 
-            if (onlyCompleted && list[i][0] != 'e') {
+            if (onlyCompleted && list[i][0] != 'e')
+            {
                 continue;
             }
 
-            if (list[i][0] == 'o') {
-            printf("%d. [ ] %s\n", lineNo, &list[i][1]);
-            lineNo++;
-            } else if (list[i][0] == 'e') {
+            if (list[i][0] == 'o')
+            {
+                printf("%d. [ ] %s\n", lineNo, &list[i][1]);
+                lineNo++;
+            }
+            else if (list[i][0] == 'e')
+            {
                 printf("%d. [x] %s\n", lineNo, &list[i][1]);
                 lineNo++;
             }
@@ -423,7 +537,8 @@ int main(int argc, char *argv[]) {
     }
 
     // reservierten Speicher aus dem Heap wieder freigeben
-    for (int i = 0; i < counter; i++) {
+    for (int i = 0; i < counter; i++)
+    {
         free(list[i]);
     }
     free(newLine);
