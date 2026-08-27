@@ -6,11 +6,28 @@
 #include <string.h>
 #include <stdbool.h>
 
+void insertionSort(char **list, int n)
+{
+    for (int i = 1; i < n; ++i)
+    {
+        int key = atoi(list[i][1]);
+        int j = i - 1;
+
+        while (j >= 0 && atoi(list[j][1]) > key)
+        {
+            list[j + 1] = list[j]; // falsch. mit realloc arbeiten um die kompletten Strings zu tauschen
+            j = j - 1;
+        }
+        list[j + 1] = key;
+    }
+}
+
 void printHelpMessage()
 {
-    printf("usage: todo [-a text] [-e text item-no] [-d item-no]\n");
+    printf("usage: todo [-p prio item-no] [-a text] [-e text item-no] [-d item-no]\n");
     printf("            [-c item-no] [-u item-no] [-l] [-U] [-C] [-h]\n");
     printf("options:\n");
+    printf("-p                      Change an items priority.\n");
     printf("-a text                 Set text value\n");
     printf("-e text item-no         Set text value for the specified item\n");
     printf("-d item-no              Delete item\n");
@@ -147,10 +164,76 @@ int main(int argc, char *argv[])
     char nameBuffer[256];
     const char *basename = "todo_";
 
-    while ((opt = getopt(argc, argv, "a:e:d:c:u:lUCh")) != -1)
+    while ((opt = getopt(argc, argv, "p:a:e:d:c:u:lUCh")) != -1)
     {
         switch (opt)
         {
+        case 'p':
+        {
+            int prio = atoi(optarg);
+            int itemNo = atoi(argv[optind]);
+            if (checkItemNo(itemNo) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            if (prio > 2 || prio < 0)
+            {
+                fprintf(stderr, "Error: Priority must be between 0-2.");
+                return EXIT_FAILURE;
+            }
+
+            // Unnötige Argumente prüfen
+            if (argv[optind + 1] != NULL)
+            {
+                fprintf(stderr, "Error: Too many arguments.\n");
+                return EXIT_FAILURE;
+            }
+
+            FILE *oldFile = fopen("todo.txt", "r");
+            FILE *temp = createTempFile(nameBuffer, sizeof(nameBuffer), basename);
+            if (checkForFileError(temp) == EXIT_FAILURE || checkForFileError(oldFile) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            while ((newLine = getLine(oldFile)) != NULL)
+            {
+                if (newLine[0] != 'o' && newLine[0] != 'e')
+                {
+                    fprintf(stderr, "The file contains invalid characters at the beginning of a line.\n");
+                    fclose(oldFile);
+                    fclose(temp);
+                    free(newLine);
+                    return EXIT_FAILURE;
+                }
+
+                if (itemNo == lineNo)
+                {
+                    fprintf(temp, "%c%d%s\n", newLine[0], prio, &newLine[2]);
+                    free(newLine);
+                    lineNo++;
+                    continue;
+                }
+
+                fprintf(temp, "%s\n", newLine);
+                free(newLine);
+                lineNo++;
+            }
+
+            if (itemNo > lineNo)
+            {
+                fprintf(stderr, "Error: That Item-No doesn't exist.");
+                free(newLine);
+                fclose(oldFile);
+                fclose(temp);
+                return EXIT_FAILURE;
+            }
+
+            fclose(oldFile);
+            fclose(temp);
+
+            if (renameFile(nameBuffer) == EXIT_FAILURE)
+                return EXIT_FAILURE;
+
+            break;
+        }
         case 'a':
         {
             item = optarg;
@@ -199,7 +282,7 @@ int main(int argc, char *argv[])
                 fprintf(temp, "%s\n", list[i]);
             }
 
-            fprintf(temp, "o%s\n", item); // neue Aufgabe hinzufügen
+            fprintf(temp, "o%d%s\n", 0, item); // neue Aufgabe hinzufügen
 
             free(newLine);
             fclose(oldFile);
@@ -317,7 +400,7 @@ int main(int argc, char *argv[])
 
                 if (replaceNo == lineNo)
                 {
-                    fprintf(temp, "%c%s\n", newLine[0], replaceArg);
+                    fprintf(temp, "%c%d%s\n", newLine[0], 0, replaceArg);
                     free(newLine);
                     lineNo++;
                     continue;
@@ -561,12 +644,12 @@ int main(int argc, char *argv[])
 
             if (list[i][0] == 'o')
             {
-                printf("%d. [ ] %s\n", lineNo, &list[i][1]);
+                printf("%d. [ ] Prio: %c | %s\n", lineNo, list[i][1], &list[i][2]);
                 lineNo++;
             }
             else if (list[i][0] == 'e')
             {
-                printf("%d. [x] %s\n", lineNo, &list[i][1]);
+                printf("%d. [x] Prio: %c | %s\n", lineNo, list[i][1], &list[i][2]);
                 lineNo++;
             }
         }
