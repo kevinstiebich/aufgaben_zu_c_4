@@ -262,6 +262,15 @@ int main(int argc, char *argv[])
                 lineNo++;
             }
 
+            if (delete > lineNo)
+            {
+                fprintf(stderr, "Error: That Item-No doesn't exist.");
+                free(newLine);
+                fclose(oldFile);
+                fclose(temp);
+                return EXIT_FAILURE;
+            }
+
             for (int i = 0; i < counter; i++)
             {
                 fprintf(temp, "%s\n", list[i]);
@@ -317,6 +326,15 @@ int main(int argc, char *argv[])
                 fprintf(temp, "%s\n", newLine);
                 free(newLine);
                 lineNo++;
+            }
+
+            if (replaceNo > lineNo)
+            {
+                fprintf(stderr, "Error: That Item-No doesn't exist.");
+                free(newLine);
+                fclose(oldFile);
+                fclose(temp);
+                return EXIT_FAILURE;
             }
 
             fclose(oldFile);
@@ -375,6 +393,15 @@ int main(int argc, char *argv[])
 
                 counter++;
                 lineNo++;
+            }
+
+            if (complete > lineNo)
+            {
+                fprintf(stderr, "Error: That Item-No doesn't exist.");
+                free(newLine);
+                fclose(oldFile);
+                fclose(temp);
+                return EXIT_FAILURE;
             }
 
             for (int i = 0; i < counter; i++)
@@ -439,6 +466,15 @@ int main(int argc, char *argv[])
 
                 counter++;
                 lineNo++;
+            }
+
+            if (unfinish > lineNo)
+            {
+                fprintf(stderr, "Error: That Item-No doesn't exist.");
+                free(newLine);
+                fclose(oldFile);
+                fclose(temp);
+                return EXIT_FAILURE;
             }
 
             for (int i = 0; i < counter; i++)
