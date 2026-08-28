@@ -8,17 +8,21 @@
 
 void insertionSort(char **list, int n)
 {
+    // zuerst wollte ich hier mti realloc arbeiten, aber
+    // wir verschieben hier ja nur die pointen und der
+    // reservierte Speicher bleibt deshalb der gleiche.
     for (int i = 1; i < n; ++i)
     {
-        int key = atoi(list[i][1]);
+        char *saved = list[i];
+        char key = list[i][1];
         int j = i - 1;
 
-        while (j >= 0 && atoi(list[j][1]) > key)
+        while (j >= 0 && list[j][1] < key)
         {
-            list[j + 1] = list[j]; // falsch. mit realloc arbeiten um die kompletten Strings zu tauschen
-            j = j - 1;
+            list[j + 1] = list[j];
+            j--;
         }
-        list[j + 1] = key;
+        list[j + 1] = saved;
     }
 }
 
@@ -630,6 +634,7 @@ int main(int argc, char *argv[])
     // Ausgabe der Liste
     if (listMode)
     {
+        insertionSort(list, counter);
         for (int i = 0; i < counter; i++)
         {
             if (onlyUnfinished && list[i][0] != 'o')
