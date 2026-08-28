@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
     int opt;
     char *item = NULL;
     char **list = NULL;
-    char *newLine;
+    char *newLine = NULL;
 
     int counter = 0;             // muss hier definiert werden, weil der Inhalt am Ende bei der Ausgabe noch wichtig wird
     int lineNo = 1;              // muss hier definiert werden, weil es entweder im Switch oder am Ende zum Einsatz kommt
